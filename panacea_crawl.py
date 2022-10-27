@@ -1,20 +1,23 @@
+import base64
+import codecs
+import datetime
+import gc
+import json
+import logging
+import os
+import shutil
+import socket
+import sys
 import threading
+import time
 from queue import Queue, Empty
 from random import randint
+
+import psutil
+import psycopg2
+
 import general
 from general import Crawl_path
-import os, shutil
-import socket
-import logging
-import codecs
-import sys
-import json
-import datetime
-import base64
-import psycopg2
-import time
-import psutil
-import gc
 
 plog = False
 
@@ -32,25 +35,25 @@ class plogger:
             self.logit.error(log)
 
 
-class spider:
-    master = ''
-    common_path = ''
-    current_path = ''
-    properties_file = ''
-    property = ''
-    input_file = ''
-    input_crawled_file = ''
-    final_file = ''
-    proxy_file = ''
-    proxies = ''
+class Spider:
+    master = ""
+    common_path = ""
+    current_path = ""
+    properties_file = ""
+    property = ""
+    input_file = ""
+    input_crawled_file = ""
+    final_file = ""
+    proxy_file = ""
+    proxies = ""
     NUMBER_OF_THREADS = 0
     num_of_attempts = 0
     time_out = 0
-    queue = ''
-    data_queue = ''
+    queue = ""
+    data_queue = ""
     input_url = []
     input_crawled_url = []
-    worker_function = ''
+    worker_function = ""
     push_data_value = {}
     browser = []
     log_report = ""
@@ -85,9 +88,16 @@ class spider:
             self.push_data_value = object.push_data_value
             self.queue = object.queue
             self.data_queue = object.data_queue
-            self.crawl_path = Crawl_path(self.current_path, self.num_of_attempts, self.NUMBER_OF_THREADS, self.time_out,
-                                         self.proxies,
-                                         self.encoding, self.get_input_headers(), self.browser_persistence)
+            self.crawl_path = Crawl_path(
+                self.current_path,
+                self.num_of_attempts,
+                self.NUMBER_OF_THREADS,
+                self.time_out,
+                self.proxies,
+                self.encoding,
+                self.get_input_headers(),
+                self.browser_persistence,
+            )
             self.crawl_path.master = self.master
             self.input_url = object.input_url
             self.input_crawled_url = object.input_crawled_url
@@ -106,36 +116,43 @@ class spider:
             self.proxy_blocked = object.proxy_blocked
             self.pnf = object.pnf
         else:
-            self.master = ''
-            self.common_path = ''
+            self.master = ""
+            self.common_path = ""
             self.current_path = current_path
-            self.properties_file = self.current_path + '\\properties.pbf'
+            self.properties_file = self.current_path + "\\properties.pbf"
             self.property = general.read_properties(self.properties_file)
-            for key in ["completed", "stop", 'paused']:
+            for key in ["completed", "stop", "paused"]:
                 if key in self.property:
                     del self.property[key]
                     general.write_properties(self.properties_file, self.property)
 
-            self.input_file = self.current_path + '\\input_file.txt'
-            self.input_crawled_file = self.current_path + '\\input_crawled.txt'
-            self.final_file = self.current_path + '\\final_data.txt'
-            self.proxy_file = self.current_path + '\\proxy.pbf'
-            self.tag_failed_file = self.current_path + '\\tag_failed.txt'
-            self.proxy_blocked_file = self.current_path + '\\proxy_blocked.txt'
-            nt = self.property['number_of_threads'].split('-')
+            self.input_file = self.current_path + "\\input_file.txt"
+            self.input_crawled_file = self.current_path + "\\input_crawled.txt"
+            self.final_file = self.current_path + "\\final_data.txt"
+            self.proxy_file = self.current_path + "\\proxy.pbf"
+            self.tag_failed_file = self.current_path + "\\tag_failed.txt"
+            self.proxy_blocked_file = self.current_path + "\\proxy_blocked.txt"
+            nt = self.property["number_of_threads"].split("-")
             self.NUMBER_OF_THREADS = int(nt[0])
             self.browser_persistence = int(nt[1]) if len(nt) > 1 else 100
-            self.num_of_attempts = int(self.property['num_of_attempts'])
-            self.time_out = int(self.property['time_out'])
+            self.num_of_attempts = int(self.property["num_of_attempts"])
+            self.time_out = int(self.property["time_out"])
             self.proxies = general.read_proxies(self.proxy_file)
-            self.encoding = self.property['encoding']
+            self.encoding = self.property["encoding"]
             self.push_data_value = {}
 
             self.queue = Queue()
             self.data_queue = Queue()
-            self.crawl_path = Crawl_path(self.current_path, self.num_of_attempts, self.NUMBER_OF_THREADS, self.time_out,
-                                         self.proxies,
-                                         self.encoding, self.get_input_headers(), self.browser_persistence)
+            self.crawl_path = Crawl_path(
+                self.current_path,
+                self.num_of_attempts,
+                self.NUMBER_OF_THREADS,
+                self.time_out,
+                self.proxies,
+                self.encoding,
+                self.get_input_headers(),
+                self.browser_persistence,
+            )
             self.input_url = []
             self.input_crawled_url = []
             self.host_name = socket.gethostname()
@@ -146,8 +163,10 @@ class spider:
             self.property_lock = threading.Lock()
             self.tag_failed_recrawl = self.proxy_blocked_recrawl = False
             self.crawling_status_first = True
-            self.found = self.tag_failed = self.other = self.proxy_blocked = self.pnf = 0
-            print('PID:', os.getpid())
+            self.found = (
+                self.tag_failed
+            ) = self.other = self.proxy_blocked = self.pnf = 0
+            print("PID:", os.getpid())
 
     def proxy_mode(self, proxy_mode):
         Crawl_path.proxy_mode = proxy_mode
@@ -162,7 +181,9 @@ class spider:
         Crawl_path.cooling_period = period
 
     def cache(self):
-        Crawl_path.cache_path = general.check_create_dir(os.path.join(Crawl_path.current_path, 'cache'))
+        Crawl_path.cache_path = general.check_create_dir(
+            os.path.join(Crawl_path.current_path, "cache")
+        )
 
     def debug(self, debug_value):
         Crawl_path.debug = debug_value
@@ -180,21 +201,27 @@ class spider:
             Crawl_path.team_name = self.team_name
             # self.log_report = "\\\\" + self.master + "\\e$\\Panacea\\team_data\\" + str(self.team_name) + "\\Batches\\" + str(
             #     self.batch_name) + "\\logs\\" + str(self.host_name) + ".log"
-            self.log_report = os.path.join(self.current_path, self.batch_name + str(".log"))
+            self.log_report = os.path.join(
+                self.current_path, self.batch_name + str(".log")
+            )
             self.common_path = self.current_path
         else:
             Crawl_path.debug = True
             self.batch_name = "Test_batch"
             self.team_name = "Test_team"
-            self.log_report = os.path.join(self.current_path, self.batch_name + str(".log"))
+            self.log_report = os.path.join(
+                self.current_path, self.batch_name + str(".log")
+            )
             self.common_path = self.current_path
-        self.logger = plogger('')
+        self.logger = plogger("")
         if plog:
-            logging.basicConfig(filename=self.log_report,
-                                filemode='a',
-                                format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                                datfmt='%H:%M:%S',
-                                level=logging.DEBUG)
+            logging.basicConfig(
+                filename=self.log_report,
+                filemode="a",
+                format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+                datfmt="%H:%M:%S",
+                level=logging.DEBUG,
+            )
 
             self.logger = plogger(logging.getLogger(str(self.host_name)))
         # print(Crawl_path.batch_id)
@@ -205,7 +232,7 @@ class spider:
     def get_input_headers(self, encoding=None):
         encoding = encoding if encoding is not None else self.encoding
         with codecs.open(self.input_file, encoding=encoding) as f:
-            headers = f.readline().replace('\r', '').replace('\n', '').split('\t')
+            headers = f.readline().replace("\r", "").replace("\n", "").split("\t")
         f.close()
         return headers
 
@@ -225,28 +252,39 @@ class spider:
     # Create worker threads (will die when main exits)
     def create_workers(self):
         for i in range(self.NUMBER_OF_THREADS):
-            t = threading.Thread(target=self.work, name='Thread-' + str(i))
+            t = threading.Thread(target=self.work, name="Thread-" + str(i))
             t.daemon = True
             t.start()
-            self.push_data_value['Thread-' + str(i)] = ''
+            self.push_data_value["Thread-" + str(i)] = ""
             # cat_threads.append(t)
 
     # Do the next job in the self.queue
     def work(self):
         while True:
             self.property = general.read_properties(self.properties_file)
-            if 'stop' in self.property:
-                if self.property['stop'] == '1':
+            if "stop" in self.property:
+                if self.property["stop"] == "1":
                     try:
-                        if str(threading.current_thread().name) in self.crawl_path.browser:
-                            browser = self.crawl_path.browser[str(threading.current_thread().name)]
-                            if browser['driver'].service.process:
-                                general.close_chrome(browser['driver'], browser['profile_path'])
-                            del self.crawl_path.browser[str(threading.current_thread().name)]
+                        if (
+                            str(threading.current_thread().name)
+                            in self.crawl_path.browser
+                        ):
+                            browser = self.crawl_path.browser[
+                                str(threading.current_thread().name)
+                            ]
+                            if browser["driver"].service.process:
+                                general.close_chrome(
+                                    browser["driver"], browser["profile_path"]
+                                )
+                            del self.crawl_path.browser[
+                                str(threading.current_thread().name)
+                            ]
                     except Exception as e:
                         print(e)
-                    self.logger.info("properties.pbf: stop is on. exausting the input queue.")
-                    print('properties.pbf: stop is on')
+                    self.logger.info(
+                        "properties.pbf: stop is on. exausting the input queue."
+                    )
+                    print("properties.pbf: stop is on")
                     while not self.queue.empty():
                         try:
                             self.queue.get(False)
@@ -255,9 +293,9 @@ class spider:
                         self.queue.task_done()
                     break
             self.property_lock.acquire()
-            if 'proxy_update' in self.property:
+            if "proxy_update" in self.property:
                 try:
-                    del self.property['proxy_update']
+                    del self.property["proxy_update"]
                     general.write_properties(self.properties_file, self.property)
                     self.proxies = general.read_proxies(self.proxy_file)
                 except Exception as e:
@@ -265,69 +303,104 @@ class spider:
             self.property_lock.release()
             url = self.queue.get()
             if Crawl_path.debug:
-                print(str(threading.current_thread().name) + " is now crawling - " + str(url))
+                print(
+                    str(threading.current_thread().name)
+                    + " is now crawling - "
+                    + str(url)
+                )
             try:
-                self.initiate(url, self.property['region'], self.proxies, threading.current_thread().name)
+                self.initiate(
+                    url,
+                    self.property["region"],
+                    self.proxies,
+                    threading.current_thread().name,
+                )
                 gc.collect()
             except Exception as e:
                 try:
-                    general.write_file('panacea_errors.txt', str(general.get_error_line(e)))
-                    self.push_data('other_exception', [url])
+                    general.write_file(
+                        "panacea_errors.txt", str(general.get_error_line(e))
+                    )
+                    self.push_data("other_exception", [url])
                 except Exception as e:
                     print(e)
-                    general.write_file('panacea_errors.txt', str(general.get_error_line(e)))
-                    self.logger.error("Error in work function section-1 for thread - " + str(
-                        threading.current_thread().name) + " - " + str(e))
+                    general.write_file(
+                        "panacea_errors.txt", str(general.get_error_line(e))
+                    )
+                    self.logger.error(
+                        "Error in work function section-1 for thread - "
+                        + str(threading.current_thread().name)
+                        + " - "
+                        + str(e)
+                    )
             self.add_count()
             try:
                 if str(threading.current_thread().name) in self.crawl_path.browser:
-                    browser = self.crawl_path.browser[str(threading.current_thread().name)]
-                    if browser[
-                        'persistence'] == self.crawl_path.browser_persistence or self.queue.qsize() < self.NUMBER_OF_THREADS:
-                        if browser['driver'].service.process:
-                            general.close_chrome(browser['driver'], browser['profile_path'])
-                        del self.crawl_path.browser[str(threading.current_thread().name)]
+                    browser = self.crawl_path.browser[
+                        str(threading.current_thread().name)
+                    ]
+                    if (
+                        browser["persistence"] == self.crawl_path.browser_persistence
+                        or self.queue.qsize() < self.NUMBER_OF_THREADS
+                    ):
+                        if browser["driver"].service.process:
+                            general.close_chrome(
+                                browser["driver"], browser["profile_path"]
+                            )
+                        del self.crawl_path.browser[
+                            str(threading.current_thread().name)
+                        ]
             except Exception as e:
                 print(e)
-                general.write_file('panacea_errors.txt', str(general.get_error_line(e)))
-                self.logger.error("Error in work function section-2 for thread - " + str(
-                    threading.current_thread().name) + " - " + str(e))
+                general.write_file("panacea_errors.txt", str(general.get_error_line(e)))
+                self.logger.error(
+                    "Error in work function section-2 for thread - "
+                    + str(threading.current_thread().name)
+                    + " - "
+                    + str(e)
+                )
             self.input_crawled_lock.acquire()
             general.write_csv(self.input_crawled_file, [url])
             self.input_crawled_lock.release()
             if Crawl_path.debug:
-                print(str(threading.current_thread().name) + " has completed crawling - " + str(url))
+                print(
+                    str(threading.current_thread().name)
+                    + " has completed crawling - "
+                    + str(url)
+                )
             self.queue.task_done()
 
     # Each self.queued link is a new job
     def create_jobs(self):
         self.logger.info("starting create jobs")
-        self.logger.info("putting " + str(len(self.input_url)) + " inputs in main queue")
+        self.logger.info(
+            "putting " + str(len(self.input_url)) + " inputs in main queue"
+        )
         for url in self.input_url:
             if url not in self.input_crawled_url:
                 self.queue.put(url)
         self.logger.info("waiting for input_file input to exhaust")
         del self.input_url
         self.queue.join()
-        if 'stop' in self.property:
+        if "stop" in self.property:
             for k, v in self.crawl_path.browser.items():
                 try:
-                    if 'driver' in v:
-                        if v['driver'].service.process:
-                            general.close_chrome(v['driver'], v['profile_path'])
+                    if "driver" in v:
+                        if v["driver"].service.process:
+                            general.close_chrome(v["driver"], v["profile_path"])
                 except Exception as e:
                     print(e)
-            if self.property['stop'] == '1':
-                del self.property['stop']
-                self.property['paused'] = 1
+            if self.property["stop"] == "1":
+                del self.property["stop"]
+                self.property["paused"] = 1
                 general.write_properties(self.properties_file, self.property)
-                print('Force Stopped Crawl.')
+                print("Force Stopped Crawl.")
                 sys.exit(0)
         recrawl = False
         try:
-            if self.property['recrawl'] == "True":
+            if self.property["recrawl"] == "True":
                 recrawl = True
-            elif bool(int(self.property['recrawl'])):
+            elif bool(int(self.property["recrawl"])):
                 recrawl = True
         except:
             pass
@@ -342,15 +415,17 @@ class spider:
                 if os.path.exists(self.proxy_blocked_file):
                     self.proxy_blocked_recrawl = True
                     self.tag_failed_recrawl = False
-                    for url in general.read_csv(self.proxy_blocked_file, skip_header=True):
+                    for url in general.read_csv(
+                        self.proxy_blocked_file, skip_header=True
+                    ):
                         self.queue.put(url)
                     self.logger.info("waiting for proxy_blocked input to exhaust")
                     self.queue.join()
-            shutil.rmtree(os.path.join(self.current_path, 'selenium'))
+            shutil.rmtree(os.path.join(self.current_path, "selenium"))
         except Exception as e:
             pass
             # print(e)
-        self.property['completed'] = 1
+        self.property["completed"] = 1
         general.write_properties(self.properties_file, self.property)
         self.logger.info("queue exhausted")
 
@@ -358,7 +433,7 @@ class spider:
     # Check if there are items in the self.queue, if so crawl them
     def crawl(self):
         if len(self.input_url) > 0:
-            print(str(len(self.input_url)) + ' link(s) in the self.queue')
+            print(str(len(self.input_url)) + " link(s) in the self.queue")
             self.create_jobs()
 
     def push_data(self, tag, data, encoding=None, use_df=False):
@@ -371,32 +446,34 @@ class spider:
         try:
             encoding = encoding if encoding is not None else str(Crawl_path.encoding)
             current_path = Crawl_path.current_path
-            if tag.lower() == 'found':
-                self.push_data_value[threading.current_thread().name] = 'found'
-                data_file_path = os.path.join(current_path, 'final_data.txt')
+            if tag.lower() == "found":
+                self.push_data_value[threading.current_thread().name] = "found"
+                data_file_path = os.path.join(current_path, "final_data.txt")
                 table_name = "crawl_datasource_found"
-            elif tag.lower() == 'pnf':
-                self.push_data_value[threading.current_thread().name] = 'pnf'
-                data_file_path = os.path.join(current_path, 'pnf.txt')
+            elif tag.lower() == "pnf":
+                self.push_data_value[threading.current_thread().name] = "pnf"
+                data_file_path = os.path.join(current_path, "pnf.txt")
                 table_name = "crawl_datasource_pnf"
-            elif tag.lower() == 'tag_failed':
-                self.push_data_value[threading.current_thread().name] = 'tag_failed'
-                data_file_path = os.path.join(current_path, 'tag_failed.txt')
+            elif tag.lower() == "tag_failed":
+                self.push_data_value[threading.current_thread().name] = "tag_failed"
+                data_file_path = os.path.join(current_path, "tag_failed.txt")
                 table_name = "crawl_datasource_tag_failed"
-            elif tag.lower() == 'proxy_blocked':
-                self.push_data_value[threading.current_thread().name] = 'proxy_blocked'
-                data_file_path = os.path.join(current_path, 'proxy_blocked.txt')
+            elif tag.lower() == "proxy_blocked":
+                self.push_data_value[threading.current_thread().name] = "proxy_blocked"
+                data_file_path = os.path.join(current_path, "proxy_blocked.txt")
                 table_name = "crawl_datasource_proxy_blocked"
-            elif tag.lower() == 'other_exception':
-                self.push_data_value[threading.current_thread().name] = 'other_exception'
-                data_file_path = os.path.join(current_path, 'other_exception.txt')
+            elif tag.lower() == "other_exception":
+                self.push_data_value[
+                    threading.current_thread().name
+                ] = "other_exception"
+                data_file_path = os.path.join(current_path, "other_exception.txt")
                 table_name = "crawl_datasource_other_exception"
             else:
-                data_file_path = os.path.join(current_path, f'{tag}.txt')
+                data_file_path = os.path.join(current_path, f"{tag}.txt")
                 table_name = None
             if not Crawl_path.debug and table_name:
                 # print("debug false")
-                if tag == 'found':
+                if tag == "found":
                     input_headers_val = Crawl_path.output_header
                 else:
                     input_headers_val = Crawl_path.input_headers
@@ -404,7 +481,7 @@ class spider:
                     data_to_push = dict(zip(input_headers_val, temp_data))
                     data_to_push = json.dumps(data_to_push)
                     self.data_queue.put([data_to_push, table_name])
-                if tag in ['proxy_blocked', 'tag_failed']:
+                if tag in ["proxy_blocked", "tag_failed"]:
                     self.push_data_lock.acquire()
                     general.write_csv(data_file_path, data, encoding=encoding)
                     self.push_data_lock.release()
@@ -416,39 +493,48 @@ class spider:
 
         except Exception as e:
             print(e)
-            self.logger.error("Error in push_data function for thread - " + str(
-                threading.current_thread().name) + " - " + str(e))
+            self.logger.error(
+                "Error in push_data function for thread - "
+                + str(threading.current_thread().name)
+                + " - "
+                + str(e)
+            )
 
     def add_count(self, encoding=None):
-        if self.push_data_value[threading.current_thread().name] == '':
-            self.push_data_value[threading.current_thread().name] = 'other_exception'
+        if self.push_data_value[threading.current_thread().name] == "":
+            self.push_data_value[threading.current_thread().name] = "other_exception"
         encoding = encoding if encoding is not None else str(Crawl_path.encoding)
-        crawling_status_path = os.path.join(self.current_path, 'crawling_status.pbf')
+        crawling_status_path = os.path.join(self.current_path, "crawling_status.pbf")
         self.crawling_status_lock.acquire()
         try:
-            if self.push_data_value[threading.current_thread().name] == 'found':
+            if self.push_data_value[threading.current_thread().name] == "found":
                 self.found += 1
                 if self.tag_failed_recrawl:
                     self.tag_failed -= 1
                 if self.proxy_blocked_recrawl:
                     self.proxy_blocked -= 1
-            elif self.push_data_value[threading.current_thread().name] == 'pnf':
+            elif self.push_data_value[threading.current_thread().name] == "pnf":
                 if self.tag_failed_recrawl:
                     self.tag_failed -= 1
                 if self.proxy_blocked_recrawl:
                     self.proxy_blocked -= 1
                 self.pnf += 1
-            elif self.push_data_value[threading.current_thread().name] == 'tag_failed':
+            elif self.push_data_value[threading.current_thread().name] == "tag_failed":
                 if not self.tag_failed_recrawl:
                     self.tag_failed += 1
                 if self.proxy_blocked_recrawl:
                     self.proxy_blocked -= 1
-            elif self.push_data_value[threading.current_thread().name] == 'proxy_blocked':
+            elif (
+                self.push_data_value[threading.current_thread().name] == "proxy_blocked"
+            ):
                 if self.tag_failed_recrawl:
                     self.tag_failed -= 1
                 if not self.proxy_blocked_recrawl:
                     self.proxy_blocked += 1
-            elif self.push_data_value[threading.current_thread().name] == 'other_exception':
+            elif (
+                self.push_data_value[threading.current_thread().name]
+                == "other_exception"
+            ):
                 if self.tag_failed_recrawl:
                     self.tag_failed -= 1
                 if self.proxy_blocked_recrawl:
@@ -458,13 +544,23 @@ class spider:
                 return
             if not os.path.isfile(crawling_status_path):
                 self.crawling_status_first = False
-                data_to_write = str(self.found) + '\n' + str(self.pnf) + '\n' + str(self.tag_failed) + '\n' + str(
-                    self.proxy_blocked) + '\n' + str(self.other) + '\n'
-                with open(crawling_status_path, 'w') as f:
+                data_to_write = (
+                    str(self.found)
+                    + "\n"
+                    + str(self.pnf)
+                    + "\n"
+                    + str(self.tag_failed)
+                    + "\n"
+                    + str(self.proxy_blocked)
+                    + "\n"
+                    + str(self.other)
+                    + "\n"
+                )
+                with open(crawling_status_path, "w") as f:
                     f.write(str(data_to_write))
                 f.close()
                 if not Crawl_path.debug:
-                    with open(crawling_status_path + '2', 'w') as f:
+                    with open(crawling_status_path + "2", "w") as f:
                         f.write(str(data_to_write))
                     f.close()
             else:
@@ -474,7 +570,9 @@ class spider:
                     try:
                         prod_count = general.file_to_list(crawling_status_path)
                     except Exception as e:
-                        general.write_file('panacea_errors.txt', str(general.get_error_line(e)))
+                        general.write_file(
+                            "panacea_errors.txt", str(general.get_error_line(e))
+                        )
                     if len(prod_count) >= 5:
                         try:
                             self.found += int(prod_count[0])
@@ -487,24 +585,34 @@ class spider:
                     else:
                         self.read_crawling_status2(crawling_status_path)
                 self.crawling_status_first = False
-                data_to_write = str(self.found) + '\n' + str(self.pnf) + '\n' + str(self.tag_failed) + '\n' + str(
-                    self.proxy_blocked) + '\n' + str(self.other) + '\n'
-                with open(crawling_status_path, 'w') as f:
+                data_to_write = (
+                    str(self.found)
+                    + "\n"
+                    + str(self.pnf)
+                    + "\n"
+                    + str(self.tag_failed)
+                    + "\n"
+                    + str(self.proxy_blocked)
+                    + "\n"
+                    + str(self.other)
+                    + "\n"
+                )
+                with open(crawling_status_path, "w") as f:
                     f.write(str(data_to_write))
                 f.close()
                 if not Crawl_path.debug:
-                    with open(crawling_status_path + '2', 'w') as f:
+                    with open(crawling_status_path + "2", "w") as f:
                         f.write(str(data_to_write))
                     f.close()
 
         except Exception as e:
-            general.write_file('panacea_errors.txt', str(e))
+            general.write_file("panacea_errors.txt", str(e))
         self.crawling_status_lock.release()
 
     def read_crawling_status2(self, crawling_status_path):
         if not Crawl_path.debug:
             try:
-                prod_count = general.file_to_list(crawling_status_path + '2')
+                prod_count = general.file_to_list(crawling_status_path + "2")
                 if len(prod_count) >= 5:
                     self.found += int(prod_count[0])
                     self.pnf += int(prod_count[1])
@@ -512,30 +620,51 @@ class spider:
                     self.proxy_blocked += int(prod_count[3])
                     self.other += int(prod_count[4])
             except Exception as e:
-                general.write_file('panacea_errors.txt', str(e))
+                general.write_file("panacea_errors.txt", str(e))
 
     def initiate(self, input_row, region, proxies_from_tool, thread_name):
         rand_num = randint(0, 2)
         if rand_num == 0:
-            self.push_data("found", [[base64.decodebytes(b'SGVsbG8gdXNlci4uIQ==\n').decode("utf-8")]])
+            self.push_data(
+                "found",
+                [[base64.decodebytes(b"SGVsbG8gdXNlci4uIQ==\n").decode("utf-8")]],
+            )
         elif rand_num == 1:
-            self.push_data("found", [[base64.decodebytes(
-                b'SSBhbSBhIHVuaXF1ZSBBSSBiYXNlZCBjb21wdXRlciBwcm9ncmFtLiBXaG8gaGFzIHRyYWluZWQg\naGltc2VsZiB0byB0YWxrIHRvIHlvdSBndXlz\n').decode(
-                "utf-8")]])
+            self.push_data(
+                "found",
+                [
+                    [
+                        base64.decodebytes(
+                            b"SSBhbSBhIHVuaXF1ZSBBSSBiYXNlZCBjb21wdXRlciBwcm9ncmFtLiBXaG8gaGFzIHRyYWluZWQg\naGltc2VsZiB0byB0YWxrIHRvIHlvdSBndXlz\n"
+                        ).decode("utf-8")
+                    ]
+                ],
+            )
 
     def ext_connect_postgre(self):
         conn = psycopg2.connect(
-            "dbname = 'panacea' user = 'postgres' host = " + self.master + " password = 'eclerx##123'")
+            "dbname = 'panacea' user = 'postgres' host = "
+            + self.master
+            + " password = 'eclerx##123'"
+        )
         cur = conn.cursor()
         return (cur, conn)
 
     def store_data(self, cur, conn):
-        while (True):
+        while True:
             data_raw = self.data_queue.get()
             data_to_push = data_raw[0]
             table_name = data_raw[1]
-            query = "INSERT INTO " + str(table_name) + " (creation_date, batch_run_id, data) VALUES (%s, %s, %s);"
-            data = (str(datetime.datetime.now()), str(Crawl_path.batch_id), str(data_to_push))
+            query = (
+                "INSERT INTO "
+                + str(table_name)
+                + " (creation_date, batch_run_id, data) VALUES (%s, %s, %s);"
+            )
+            data = (
+                str(datetime.datetime.now()),
+                str(Crawl_path.batch_id),
+                str(data_to_push),
+            )
             cur.execute(query, data)
             conn.commit()
             self.data_queue.task_done()
@@ -552,8 +681,8 @@ class spider:
                 cpu = p.cpu_percent()
                 for c in p.children(recursive=True):
                     cpu += c.cpu_percent()
-                with open('memory.log', 'w') as fw:
-                    fw.write(f'{str(round(t, 2))} GB\t{cpu}%')
+                with open("memory.log", "w") as fw:
+                    fw.write(f"{str(round(t, 2))} GB\t{cpu}%")
                     fw.close()
         except:
             pass
@@ -565,17 +694,21 @@ class spider:
             if not Crawl_path.debug:
                 self.logger.info("debug-False, creating db queue")
                 cur, conn = self.ext_connect_postgre()
-                db_thread = threading.Thread(target=self.store_data, name='Thread-store_data', args=[cur, conn])
+                db_thread = threading.Thread(
+                    target=self.store_data, name="Thread-store_data", args=[cur, conn]
+                )
                 db_thread.daemon = True
                 db_thread.start()
-                mm_thread = threading.Thread(target=self.monitor_memory, name='Thread-monitor_memory')
+                mm_thread = threading.Thread(
+                    target=self.monitor_memory, name="Thread-monitor_memory"
+                )
                 mm_thread.daemon = True
                 mm_thread.start()
                 # self.data_queue.put(url)
             if not os.path.isfile(self.input_crawled_file):
                 self.logger.info("creating crawled file")
-                general.write_file(self.input_crawled_file, '')
-                f = open(self.input_crawled_file, 'w+')
+                general.write_file(self.input_crawled_file, "")
+                f = open(self.input_crawled_file, "w+")
                 f.close()
             self.logger.info("checking input list")
             if input_list is None:
@@ -584,14 +717,16 @@ class spider:
             else:
                 self.logger.info("reading inputs provided by user")
                 self.input_url = input_list
-            if str(self.property['resume_crawl']).lower() == 'off':
-                self.logger.info("resume crawl off. deleting- crawling_status, pnf, proxy_blocked and tag_failed")
+            if str(self.property["resume_crawl"]).lower() == "off":
+                self.logger.info(
+                    "resume crawl off. deleting- crawling_status, pnf, proxy_blocked and tag_failed"
+                )
                 self.delete_file(self.input_crawled_file)
-                self.delete_file(self.current_path + '\\crawling_status.pbf')
-                self.delete_file(self.current_path + '\\pnf.txt')
-                self.delete_file(self.current_path + '\\proxy_blocked.txt')
-                self.delete_file(self.current_path + '\\tag_failed.txt')
-                self.delete_file(self.current_path + '\\other_exception.txt')
+                self.delete_file(self.current_path + "\\crawling_status.pbf")
+                self.delete_file(self.current_path + "\\pnf.txt")
+                self.delete_file(self.current_path + "\\proxy_blocked.txt")
+                self.delete_file(self.current_path + "\\tag_failed.txt")
+                self.delete_file(self.current_path + "\\other_exception.txt")
             else:
                 self.logger.info("resume crawl on")
                 self.input_crawled_url = general.read_csv(self.input_crawled_file)

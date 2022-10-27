@@ -1,0 +1,11 @@
+fake_headers
+selenium
+amazoncaptcha
+selenium-wire
+selenium
+lxml
+pandas
+stem
+requests
+psycopg2
+psutil
