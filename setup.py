@@ -8,7 +8,7 @@ setup(
     author='Rishikesh Shendkar',
     author_email='rishikesh.shendkar@gmail.com',
     license='',
-    # packages=['python_crawling_library'],
+    packages=['panacea_crawl'],
     install_requires=['fake_headers',
                       'selenium',
                       'amazoncaptcha',
