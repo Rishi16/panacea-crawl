@@ -16,8 +16,8 @@ from random import randint
 import psutil
 import psycopg2
 
-import general
-from general import Crawl_path
+import panacea_crawl.general as general
+from panacea_crawl.general import Crawl_path
 
 plog = False
 
