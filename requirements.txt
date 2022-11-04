@@ -7,4 +7,3 @@ lxml
 pandas
 stem
 requests
-psutil
