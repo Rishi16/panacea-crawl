@@ -14,7 +14,11 @@ from queue import Queue, Empty
 from random import randint
 
 import psutil
-import psycopg2
+
+try:
+    import psycopg2
+except Exception:
+    pass
 
 import panacea_crawl.general as general
 from panacea_crawl.general import Crawl_path

@@ -7,5 +7,4 @@ lxml
 pandas
 stem
 requests
-psycopg2
 psutil
