@@ -13,10 +13,11 @@ import time
 from queue import Queue, Empty
 from random import randint
 
-import psutil
 
 try:
     import psycopg2
+    import psutil
+
 except Exception:
     pass
 
