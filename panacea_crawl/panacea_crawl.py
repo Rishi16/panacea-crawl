@@ -236,9 +236,10 @@ class Spider:
 
     def get_input_headers(self, encoding=None):
         encoding = encoding if encoding is not None else self.encoding
-        with codecs.open(self.input_file, encoding=encoding) as f:
-            headers = f.readline().replace("\r", "").replace("\n", "").split("\t")
-        f.close()
+        headers = [1]
+        if os.path.exists(self.input_file):
+            with codecs.open(self.input_file, encoding=encoding) as f:
+                headers = f.readline().replace("\r", "").replace("\n", "").split("\t")
         return headers
 
     def delete_file(self, file_path):

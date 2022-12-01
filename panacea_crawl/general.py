@@ -372,87 +372,6 @@ def create_session(
         cloak=False,
         proxy_auth_plugin="proxy_auth_plugin",
 ):
-    if proxies_from_file is None:
-        proxies_from_file = Crawl_path.proxies
-    if proxies:
-        proxy = proxies["https"].replace("https://", "")
-        proxy = proxy.split("@")
-        pr_username, pr_password = proxy[0].split(":")
-        pr_host, pr_port = proxy[1].split(":")
-    else:
-        strPOS = randint(0, len(proxies_from_file) - 1)
-        pr_host = str(proxies_from_file[strPOS]["host"])
-        pr_port = str(proxies_from_file[strPOS]["port"])
-        pr_username = proxies_from_file[strPOS]["username"]
-        pr_password = proxies_from_file[strPOS]["password"]
-    proxy_to_return = {
-        "https": "https://"
-                 + str(pr_username)
-                 + ":"
-                 + str(pr_password)
-                 + "@"
-                 + str(pr_host)
-                 + ":"
-                 + str(pr_port)
-    }
-
-    manifest_json = """
-    {
-        "version": "1.0.0",
-        "manifest_version": 2,
-        "name": "Chrome Proxy",
-        "permissions": [
-            "proxy",
-            "tabs",
-            "unlimitedStorage",
-            "storage",
-            "<all_urls>",
-            "webRequest",
-            "webRequestBlocking"
-        ],
-        "background": {
-            "scripts": ["background.js"]
-        },
-        "minimum_chrome_version":"22.0.0"
-    }
-    """
-
-    background_js = """
-    var config = {
-            mode: "fixed_servers",
-            rules: {
-            singleProxy: {
-                scheme: "http",
-                host: "%s",
-                port: parseInt(%s)
-            },
-            bypassList: ["localhost"]
-            }
-        };
-
-    chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
-
-    function callbackFn(details) {
-        return {
-            authCredentials: {
-                username: "%s",
-                password: "%s"
-            }
-        };
-    }
-
-    chrome.webRequest.onAuthRequired.addListener(
-                callbackFn,
-                {urls: ["<all_urls>"]},
-                ['blocking']
-    );
-    """ % (
-        pr_host,
-        pr_port,
-        pr_username,
-        pr_password,
-    )
-
     options = Options()
     options.add_argument("start-maximized")
     profile_path = check_create_dir(
@@ -472,6 +391,216 @@ def create_session(
         prefs = {"profile.managed_default_content_settings.images": 2}
         options.add_experimental_option("prefs", prefs)
     capabilities = dict(DesiredCapabilities.CHROME)
+    options.binary_location = (
+        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+    )
+    if not visible:
+        options.add_argument("--headless")
+    if not images:
+        prefs = {
+            "profile.managed_default_content_settings.images": 2,
+            "disk-cache-size": 209715200,
+        }
+        options.add_experimental_option("prefs", prefs)
+
+    if proxies_from_file is None:
+        proxies_from_file = Crawl_path.proxies
+        if proxies != False:
+            if proxies:
+                proxy = proxies["https"].replace("https://", "")
+                proxy = proxy.split("@")
+                pr_username, pr_password = proxy[0].split(":")
+                pr_host, pr_port = proxy[1].split(":")
+            elif proxies is None:
+                strPOS = randint(0, len(proxies_from_file) - 1)
+                pr_host = str(proxies_from_file[strPOS]["host"])
+                pr_port = str(proxies_from_file[strPOS]["port"])
+                pr_username = proxies_from_file[strPOS]["username"]
+                pr_password = proxies_from_file[strPOS]["password"]
+            proxy_to_return = {
+                "https": "https://"
+                         + str(pr_username)
+                         + ":"
+                         + str(pr_password)
+                         + "@"
+                         + str(pr_host)
+                         + ":"
+                         + str(pr_port)
+            }
+
+            manifest_json = """
+            {
+                "version": "1.0.0",
+                "manifest_version": 2,
+                "name": "Chrome Proxy",
+                "permissions": [
+                    "proxy",
+                    "tabs",
+                    "unlimitedStorage",
+                    "storage",
+                    "<all_urls>",
+                    "webRequest",
+                    "webRequestBlocking"
+                ],
+                "background": {
+                    "scripts": ["background.js"]
+                },
+                "minimum_chrome_version":"22.0.0"
+            }
+            """
+
+            background_js = """
+            var config = {
+                    mode: "fixed_servers",
+                    rules: {
+                    singleProxy: {
+                        scheme: "http",
+                        host: "%s",
+                        port: parseInt(%s)
+                    },
+                    bypassList: ["localhost"]
+                    }
+                };
+        
+            chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+        
+            function callbackFn(details) {
+                return {
+                    authCredentials: {
+                        username: "%s",
+                        password: "%s"
+                    }
+                };
+            }
+        
+            chrome.webRequest.onAuthRequired.addListener(
+                        callbackFn,
+                        {urls: ["<all_urls>"]},
+                        ['blocking']
+            );
+            """ % (
+                pr_host,
+                pr_port,
+                pr_username,
+                pr_password,
+            )
+
+        if use_proxy:
+            # print('user proxy')
+            ext_path = check_create_dir(
+                os.path.join(
+                    Crawl_path.current_path,
+                    "selenium",
+                    "extensions",
+                    threading.current_thread().name,
+                )
+            )
+            write_file(
+                os.path.join(ext_path, "manifest.json"),
+                manifest_json,
+                mode="w",
+                encoding="utf8",
+            )
+            write_file(
+                os.path.join(ext_path, "background.js"),
+                background_js,
+                mode="w",
+                encoding="utf8",
+            )
+            options.add_argument("--load-extension=" + ext_path)
+            # pluginfile = os.path.join(str(Crawl_path.current_path), str(proxy_auth_plugin) + '.zip')
+            # with zipfile.ZipFile(pluginfile, 'w') as zp:
+            #     zp.writestr("manifest.json", manifest_json)
+            #     zp.writestr("background.js", background_js)
+            # # prefs = {"profile.managed_default_content_settings.images": 2}
+            # chrome_options.add_extension(pluginfile)
+            # chrome_options.add_experimental_option("prefs", prefs)
+            # chrome_options.add_experimental_option("prefs",
+            # {'profile.managed_default_content_settings.javascript': 2})
+            # chrome_options.binary_location = 'C:\\Users\\' + str(
+            #     user_name) + '\\AppData\\Local\\Google\\Chrome SxS\\Application\\chrome.exe'
+        else:
+            capabilities["proxy"] = {
+                "proxyType": "MANUAL",
+                "httpProxy": pr_host + ":" + str(pr_port),
+                "ftpProxy": pr_host + ":" + str(pr_port),
+                "sslProxy": pr_host + ":" + str(pr_port),
+                "noProxy": "",
+                "class": "org.openqa.selenium.Proxy",
+                "autodetect": False,
+            }
+            capabilities["proxy"]["socksUsername"] = pr_username
+            capabilities["proxy"]["socksPassword"] = pr_password
+            # prefs = {"profile.managed_default_content_settings.images": 2}
+            # chrome_options.add_experimental_option("prefs", prefs)
+            # chrome_options.add_experimental_option("prefs",
+            # {'profile.managed_default_content_settings.javascript': 2})
+            options.binary_location = (
+                    "C:\\Users\\"
+                    + str(user_name)
+                    + "\\AppData\\Local\\Google\\Chrome SxS\\Application\\chrome.exe"
+            )
+            options.add_argument("--headless")
+            capabilities["pageLoadStrategy"] = "none"
+            driver = webdriver.Chrome(
+                "chromedriver.exe",
+                chrome_options=options,
+                desired_capabilities=capabilities,
+            )
+
+    # capabilities["pageLoadStrategy"] = "none"
+    if not all_requests:
+        driver = webdriver.Chrome(
+            "chromedriver.exe",
+            chrome_options=options,
+            desired_capabilities=capabilities,
+        )
+    else:
+        driver = wirewebdriver.Chrome(
+            "chromedriver.exe",
+            chrome_options=options,
+            desired_capabilities=capabilities,
+        )
+    enable_console_log = True
+    try:
+        if driver.execute_script("return navigator.webdriver"):
+            driver.execute_cdp_cmd(
+                "Page.addScriptToEvaluateOnNewDocument",
+                {
+                    "source": """
+                                            Object.defineProperty(window, 'navigator', {
+                                                value: new Proxy(navigator, {
+                                                has: (target, key) => (key === 'webdriver' ? 
+                                                false : 
+                                                key in target),
+                                                get: (target, key) =>
+                                                    key === 'webdriver'
+                                                    ? undefined
+                                                    : typeof target[key] === 'function'
+                                                    ? target[key].bind(target)
+                                                    : target[key]
+                                                })
+                                            });
+                                        """
+                              + (
+                                  "console.log = console.dir = console.error = function(){};"
+                                  if not enable_console_log
+                                  else ""
+                              )
+                },
+            )
+        driver.execute_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        )
+        driver.execute_cdp_cmd(
+            "Network.setUserAgentOverride",
+            {
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ("
+                             "KHTML, like Gecko) Chrome/83.0.4103.53 Safari/537.36"
+            },
+        )
+    except:
+        pass
     # capabilities['proxy'] = {'proxyType': 'MANUAL',
     #                          'httpProxy': pr_host + ':' + pr_port,
     #                          'ftpProxy': pr_host + ':' + pr_port,
@@ -481,131 +610,6 @@ def create_session(
     #                          'autodetect': False}
     # capabilities['proxy']['socksUsername'] = pr_username
     # capabilities['proxy']['socksPassword'] = pr_password
-    if use_proxy:
-        # print('user proxy')
-        ext_path = check_create_dir(
-            os.path.join(
-                Crawl_path.current_path,
-                "selenium",
-                "extensions",
-                threading.current_thread().name,
-            )
-        )
-        write_file(
-            os.path.join(ext_path, "manifest.json"),
-            manifest_json,
-            mode="w",
-            encoding="utf8",
-        )
-        write_file(
-            os.path.join(ext_path, "background.js"),
-            background_js,
-            mode="w",
-            encoding="utf8",
-        )
-        options.add_argument("--load-extension=" + ext_path)
-        # pluginfile = os.path.join(str(Crawl_path.current_path), str(proxy_auth_plugin) + '.zip')
-        # with zipfile.ZipFile(pluginfile, 'w') as zp:
-        #     zp.writestr("manifest.json", manifest_json)
-        #     zp.writestr("background.js", background_js)
-        # # prefs = {"profile.managed_default_content_settings.images": 2}
-        # chrome_options.add_extension(pluginfile)
-        # chrome_options.add_experimental_option("prefs", prefs)
-        # chrome_options.add_experimental_option("prefs",
-        # {'profile.managed_default_content_settings.javascript': 2})
-        # chrome_options.binary_location = 'C:\\Users\\' + str(
-        #     user_name) + '\\AppData\\Local\\Google\\Chrome SxS\\Application\\chrome.exe'
-        options.binary_location = (
-            "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-        )
-        if not visible:
-            options.add_argument("--headless")
-        if not images:
-            prefs = {
-                "profile.managed_default_content_settings.images": 2,
-                "disk-cache-size": 209715200,
-            }
-            options.add_experimental_option("prefs", prefs)
-        # capabilities["pageLoadStrategy"] = "none"
-        if not all_requests:
-            driver = webdriver.Chrome(
-                "chromedriver.exe",
-                chrome_options=options,
-                desired_capabilities=capabilities,
-            )
-        else:
-            driver = wirewebdriver.Chrome(
-                "chromedriver.exe",
-                chrome_options=options,
-                desired_capabilities=capabilities,
-            )
-        enable_console_log = True
-        try:
-            if driver.execute_script("return navigator.webdriver"):
-                driver.execute_cdp_cmd(
-                    "Page.addScriptToEvaluateOnNewDocument",
-                    {
-                        "source": """
-                                        Object.defineProperty(window, 'navigator', {
-                                            value: new Proxy(navigator, {
-                                            has: (target, key) => (key === 'webdriver' ? false : 
-                                            key in target),
-                                            get: (target, key) =>
-                                                key === 'webdriver'
-                                                ? undefined
-                                                : typeof target[key] === 'function'
-                                                ? target[key].bind(target)
-                                                : target[key]
-                                            })
-                                        });
-                                    """
-                                  + (
-                                      "console.log = console.dir = console.error = function(){};"
-                                      if not enable_console_log
-                                      else ""
-                                  )
-                    },
-                )
-            driver.execute_script(
-                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-            )
-            driver.execute_cdp_cmd(
-                "Network.setUserAgentOverride",
-                {
-                    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ("
-                                 "KHTML, like Gecko) Chrome/83.0.4103.53 Safari/537.36"
-                },
-            )
-        except:
-            pass
-    else:
-        capabilities["proxy"] = {
-            "proxyType": "MANUAL",
-            "httpProxy": pr_host + ":" + str(pr_port),
-            "ftpProxy": pr_host + ":" + str(pr_port),
-            "sslProxy": pr_host + ":" + str(pr_port),
-            "noProxy": "",
-            "class": "org.openqa.selenium.Proxy",
-            "autodetect": False,
-        }
-        capabilities["proxy"]["socksUsername"] = pr_username
-        capabilities["proxy"]["socksPassword"] = pr_password
-        # prefs = {"profile.managed_default_content_settings.images": 2}
-        # chrome_options.add_experimental_option("prefs", prefs)
-        # chrome_options.add_experimental_option("prefs",
-        # {'profile.managed_default_content_settings.javascript': 2})
-        options.binary_location = (
-                "C:\\Users\\"
-                + str(user_name)
-                + "\\AppData\\Local\\Google\\Chrome SxS\\Application\\chrome.exe"
-        )
-        options.add_argument("--headless")
-        capabilities["pageLoadStrategy"] = "none"
-        driver = webdriver.Chrome(
-            "chromedriver.exe",
-            chrome_options=options,
-            desired_capabilities=capabilities,
-        )
     return driver, proxy_to_return, profile_path
 
 
