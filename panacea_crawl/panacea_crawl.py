@@ -718,7 +718,11 @@ class Spider:
             self.logger.info("checking input list")
             if input_list is None:
                 self.logger.info("reading new inputs from file")
-                self.input_url = general.read_csv(self.input_file, skip_header=True)
+                if os.path.exists(self.input_file):
+                    self.input_url = general.read_csv(self.input_file, skip_header=True)
+                else:
+                    self.input_url = [1]
+                    self.property["resume_crawl"] = "off"
             else:
                 self.logger.info("reading inputs provided by user")
                 self.input_url = input_list

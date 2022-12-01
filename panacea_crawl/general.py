@@ -262,35 +262,35 @@ def write_properties(file_name, data):
 def read_proxies(file_name):
     proxies = []
     each_proxy = {}
-    with open(file_name, "rt", encoding="utf-8-sig") as f:
-        validator = 0
-        for line in f:
-            if "=" in line:
-                line = line.replace("\n", "")
-                values = line.split("=")
-                validator += 1
-                if validator == 1:
-                    each_proxy["host"] = values[1]
-                elif validator == 2:
-                    each_proxy["username"] = values[1]
-                elif validator == 3:
-                    each_proxy["password"] = values[1]
-                if validator == 4:
-                    each_proxy["port"] = values[1]
-                if validator == 4:
-                    validator = 0
+    if os.path.exists(file_name):
+        with open(file_name, "rt", encoding="utf-8-sig") as f:
+            validator = 0
+            for line in f:
+                if "=" in line:
+                    line = line.replace("\n", "")
+                    values = line.split("=")
+                    validator += 1
+                    if validator == 1:
+                        each_proxy["host"] = values[1]
+                    elif validator == 2:
+                        each_proxy["username"] = values[1]
+                    elif validator == 3:
+                        each_proxy["password"] = values[1]
+                    if validator == 4:
+                        each_proxy["port"] = values[1]
+                    if validator == 4:
+                        validator = 0
+                        proxies.append(each_proxy)
+                        each_proxy = {}
+                elif "\t" in line:
+                    (
+                        each_proxy["host"],
+                        each_proxy["username"],
+                        each_proxy["password"],
+                        each_proxy["port"],
+                    ) = line.replace("\n", "").split("\t")
                     proxies.append(each_proxy)
                     each_proxy = {}
-            elif "\t" in line:
-                (
-                    each_proxy["host"],
-                    each_proxy["username"],
-                    each_proxy["password"],
-                    each_proxy["port"],
-                ) = line.replace("\n", "").split("\t")
-                proxies.append(each_proxy)
-                each_proxy = {}
-    f.close()
     return proxies
 
 
@@ -816,7 +816,7 @@ def get_url(
         cookies=None,
         params=None,
         encoding=None,
-        proxies=None,
+        proxies=False,
         verify=True,
         keep_proxy=False,
         blockwords=[],
@@ -1215,7 +1215,7 @@ def get_url(
 def get_url2(
         url,
         tag_to_find="",
-        proxies=None,
+        proxies=False,
         session=None,
         close_session=False,
         visible=True,
