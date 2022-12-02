@@ -667,6 +667,13 @@ def wait_driver(driver, tag, wait_time, by="XPATH"):
         return False
 
 
+def find_elements_driver(driver, tag):
+    try:
+        return driver.find_elements(By.XPATH, tag)
+    except:
+        return None
+
+
 # Used in old scripts. Keeping it for backwards compatibiltiy
 def random_proxy(proxies_from_file):
     return get_proxy(proxies_from_file)
