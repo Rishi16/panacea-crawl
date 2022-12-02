@@ -3,8 +3,10 @@ import csv
 import json
 import socket
 import threading
+import zipfile
 from zlib import compress
 
+import wget
 from fake_headers import Headers
 from selenium.common.exceptions import TimeoutException
 
@@ -113,6 +115,34 @@ class Crawl_path:
         Crawl_path.batch_name = ""
         Crawl_path.master = ""
         Crawl_path.team_name = ""
+        self.binary_location = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+        self.setup_chromedriver()
+
+    def setup_chromedriver(self):
+        if os.path.exists(f'{os.getenv("ProgramFiles")}\Google\Chrome\Application\chrome.exe'):
+            self.binary_location = f'{os.getenv("ProgramFiles")}\Google\Chrome\Application\chrome.exe'
+        if not self.binary_location and os.path.exists(
+                f'{os.getenv("ProgramFiles(x86)")}\Google\Chrome\Application\chrome.exe'):
+            self.binary_location = f'{os.getenv("ProgramFiles(x86)")}\Google\Chrome\Application\chrome.exe'
+
+        if not os.path.exists('chromedriver.exe'):
+            # get the latest chrome driver version number
+            url = 'https://chromedriver.storage.googleapis.com/LATEST_RELEASE'
+            response = requests.get(url)
+            version_number = response.text
+
+            # build the donwload url
+            download_url = "https://chromedriver.storage.googleapis.com/" + version_number + \
+                           "/chromedriver_win32.zip"
+
+            # download the zip file using the url built above
+            latest_driver_zip = wget.download(download_url, 'chromedriver.zip')
+
+            # extract the zip file
+            with zipfile.ZipFile(latest_driver_zip, 'r') as zip_ref:
+                zip_ref.extractall()  # you can specify the destination folder path here
+            # delete the zip file downloaded above
+            os.remove(latest_driver_zip)
 
     def get_browser(self):
         return Crawl_path.browser
@@ -391,9 +421,7 @@ def create_session(
         prefs = {"profile.managed_default_content_settings.images": 2}
         options.add_experimental_option("prefs", prefs)
     capabilities = dict(DesiredCapabilities.CHROME)
-    options.binary_location = (
-        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-    )
+    options.binary_location = binary_location
     if not visible:
         options.add_argument("--headless")
     if not images:
@@ -535,11 +563,6 @@ def create_session(
             # chrome_options.add_experimental_option("prefs", prefs)
             # chrome_options.add_experimental_option("prefs",
             # {'profile.managed_default_content_settings.javascript': 2})
-            options.binary_location = (
-                    "C:\\Users\\"
-                    + str(user_name)
-                    + "\\AppData\\Local\\Google\\Chrome SxS\\Application\\chrome.exe"
-            )
             options.add_argument("--headless")
             capabilities["pageLoadStrategy"] = "none"
             driver = webdriver.Chrome(
@@ -1902,23 +1925,6 @@ def save_cache(data):
             fw.close()
         return f"http://{Crawl_path.master}:8000/crawl/cache_page?host={Crawl_path.host_address}&team_name={Crawl_path.team_name}&batch_name={Crawl_path.batch_name}&file_name={file_name}"
 
-# def captcha(path):
-#     img = cv2.imread(img_path)
-#
-#     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-#
-#     mask = cv2.inRange(hsv, (0, 0, 100), (255, 5, 255))
-#
-#     # Build mask of non black pixels.
-#     nzmask = cv2.inRange(hsv, (0, 0, 5), (255, 255, 255))
-#
-#     # Erode the mask - all pixels around a black pixels should not be masked.
-#     nzmask = cv2.erode(nzmask, np.ones((3, 3)))
-#
-#     mask = mask & nzmask
-#
-#     new_img = img.copy()
-#     new_img[np.where(mask)] = 255
-#
-#     cv2.imshow('mask', mask);
-#     cv2.imshow('new_img', new_img);
+
+if __name__ == "__main__":
+    Crawl_path(1,1,1,1,1,1,1,1).setup_chromedriver()
