@@ -1899,7 +1899,7 @@ def send_text(driver, xpath, text, click=False):
 
 def click(driver, xpath, loc=0):
     try:
-        driver.find_elements_by_xpath(xpath)[loc].click()
+        driver.find_elements(By.XPATH, xpath)[loc].click()
     except Exception as e:
         print(e)
         pass
