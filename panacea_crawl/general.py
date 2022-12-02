@@ -115,15 +115,15 @@ class Crawl_path:
         Crawl_path.batch_name = ""
         Crawl_path.master = ""
         Crawl_path.team_name = ""
-        self.binary_location = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+        Crawl_path.binary_location = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
         self.setup_chromedriver()
 
     def setup_chromedriver(self):
         if os.path.exists(f'{os.getenv("ProgramFiles")}\Google\Chrome\Application\chrome.exe'):
-            self.binary_location = f'{os.getenv("ProgramFiles")}\Google\Chrome\Application\chrome.exe'
-        if not self.binary_location and os.path.exists(
+            Crawl_path.binary_location = f'{os.getenv("ProgramFiles")}\Google\Chrome\Application\chrome.exe'
+        if not Crawl_path.binary_location and os.path.exists(
                 f'{os.getenv("ProgramFiles(x86)")}\Google\Chrome\Application\chrome.exe'):
-            self.binary_location = f'{os.getenv("ProgramFiles(x86)")}\Google\Chrome\Application\chrome.exe'
+            Crawl_path.binary_location = f'{os.getenv("ProgramFiles(x86)")}\Google\Chrome\Application\chrome.exe'
 
         if not os.path.exists('chromedriver.exe'):
             # get the latest chrome driver version number
@@ -421,7 +421,7 @@ def create_session(
         prefs = {"profile.managed_default_content_settings.images": 2}
         options.add_experimental_option("prefs", prefs)
     capabilities = dict(DesiredCapabilities.CHROME)
-    options.binary_location = binary_location
+    options.binary_location = Crawl_path.binary_location
     if not visible:
         options.add_argument("--headless")
     if not images:
