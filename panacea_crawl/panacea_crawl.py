@@ -236,7 +236,7 @@ class Spider:
 
     def get_input_headers(self, encoding=None):
         encoding = encoding if encoding is not None else self.encoding
-        headers = [1]
+        headers = ["1"]
         if os.path.exists(self.input_file):
             with codecs.open(self.input_file, encoding=encoding) as f:
                 headers = f.readline().replace("\r", "").replace("\n", "").split("\t")
@@ -722,7 +722,7 @@ class Spider:
                 if os.path.exists(self.input_file):
                     self.input_url = general.read_csv(self.input_file, skip_header=True)
                 else:
-                    self.input_url = [1]
+                    self.input_url = ["1"]
                     self.property["resume_crawl"] = "off"
             else:
                 self.logger.info("reading inputs provided by user")
