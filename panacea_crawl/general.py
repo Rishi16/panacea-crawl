@@ -661,8 +661,10 @@ def wait_driver(driver, tag, wait_time, by="XPATH"):
             )
 
         print("Page loaded.")
+        return True
     except TimeoutException:
         print("Tag not found:", tag)
+        return False
 
 
 # Used in old scripts. Keeping it for backwards compatibiltiy
@@ -1887,7 +1889,7 @@ def close_chrome(driver, profile_path):
         pass
 
 
-def send_text(driver, text, xpath, loc, click=False):
+def send_text(driver, text, xpath, loc=0, click=False):
     try:
         driver.find_elements(By.XPATH, xpath)[loc].send_keys(text)
         if click:
