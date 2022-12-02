@@ -1887,11 +1887,11 @@ def close_chrome(driver, profile_path):
         pass
 
 
-def send_text(driver, xpath, text, click=False):
+def send_text(driver, text, xpath, loc, click=False):
     try:
-        driver.find_element_by_xpath(xpath).send_keys(text)
+        driver.find_elements(By.XPATH, xpath)[loc].send_keys(text)
         if click:
-            driver.find_element_by_xpath(xpath).send_keys(Keys.RETURN)
+            driver.find_elements(By.XPATH, xpath)[loc].send_keys(Keys.RETURN)
     except Exception as e:
         print(e)
         pass
