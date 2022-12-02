@@ -402,6 +402,7 @@ def create_session(
         cloak=False,
         proxy_auth_plugin="proxy_auth_plugin",
 ):
+    proxy_to_return = {}
     options = Options()
     options.add_argument("start-maximized")
     profile_path = check_create_dir(
@@ -435,7 +436,7 @@ def create_session(
         proxies_from_file = Crawl_path.proxies
         if proxies != False:
             if proxies:
-                proxy = proxies["https"].replace("https://", "")
+                proxy = proxies.get("https","").replace("https://", "")
                 proxy = proxy.split("@")
                 pr_username, pr_password = proxy[0].split(":")
                 pr_host, pr_port = proxy[1].split(":")
@@ -1162,7 +1163,7 @@ def get_url(
                             url,
                             res_url,
                             res_code,
-                            proxies["https"],
+                            proxies.get("https",""),
                             blockword,
                             title,
                             "",
@@ -1213,7 +1214,7 @@ def get_url(
                             url,
                             "Exception",
                             "",
-                            proxies["https"],
+                            proxies.get("https",""),
                             blockword,
                             title,
                             str(e),
@@ -1497,7 +1498,7 @@ def get_url2(
                         url,
                         res_url,
                         status_code,
-                        proxies["https"],
+                        proxies.get("https",""),
                         blockword,
                         title,
                         "",
@@ -1507,7 +1508,7 @@ def get_url2(
             )
             Crawl_path.requests_log_lock.release()
             if Crawl_path.print_requests:
-                print(number_of_attempts, url, title, blockword, proxies["https"])
+                print(number_of_attempts, url, title, blockword, proxies.get("https",""))
             if response and not blocked:
                 break
             else:
@@ -1528,7 +1529,7 @@ def get_url2(
                         url,
                         "Exception",
                         "",
-                        proxies["https"],
+                        proxies.get("https",""),
                         blockword,
                         title,
                         str(e),
