@@ -24,7 +24,7 @@ except Exception:
 import panacea_crawl.general as general
 from panacea_crawl.general import Crawl_path
 
-plog = False
+plog = True
 
 
 class plogger:
@@ -212,8 +212,8 @@ class Spider:
             self.common_path = self.current_path
         else:
             Crawl_path.debug = True
-            self.batch_name = "Test_batch"
-            self.team_name = "Test_team"
+            self.batch_name = "crawl"
+            self.team_name = "jaguar"
             self.log_report = os.path.join(
                 self.current_path, self.batch_name + str(".log")
             )
@@ -224,7 +224,7 @@ class Spider:
                 filename=self.log_report,
                 filemode="a",
                 format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
-                datfmt="%H:%M:%S",
+                datefmt="%H:%M:%S",
                 level=logging.DEBUG,
             )
 
