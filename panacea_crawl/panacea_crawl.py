@@ -225,7 +225,7 @@ class Spider:
                 filemode="a",
                 format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
                 datefmt="%H:%M:%S",
-                level=logging.DEBUG,
+                level="INFO" or self.property.get("log_level"),
             )
 
             self.logger = plogger(logging.getLogger(str(self.host_name)))
