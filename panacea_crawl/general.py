@@ -85,6 +85,7 @@ class Crawl_path:
             encoding,
             input_headers,
             browser_persistence,
+            clear_selenium_session,
     ):
         debug = True
         batch_id = None
@@ -115,6 +116,7 @@ class Crawl_path:
         Crawl_path.batch_name = ""
         Crawl_path.master = ""
         Crawl_path.team_name = ""
+        Crawl_path.clear_selenium_session = clear_selenium_session
         Crawl_path.binary_location = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
         self.setup_chromedriver()
 
@@ -1891,7 +1893,8 @@ def close_chrome(driver, profile_path):
     except:
         pass
     try:
-        shutil.rmtree(profile_path)
+        if Crawl_path.clear_selenium_session != "0":
+            shutil.rmtree(profile_path)
     except Exception as e:
         pass
 

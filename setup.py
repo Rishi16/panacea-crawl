@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='panacea-crawl',
-    version='1.0.0',
+    version='1.0.1',
     description='A distributed crawling library with easy crawling features',
     url='https://github.com/Rishi16/python_crawling_library',
     author='Rishikesh Shendkar',

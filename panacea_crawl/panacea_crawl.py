@@ -102,6 +102,7 @@ class Spider:
                 self.encoding,
                 self.get_input_headers(),
                 self.browser_persistence,
+                self.property.get("clear_selenium_session", "1")
             )
             self.crawl_path.master = self.master
             self.input_url = object.input_url
@@ -157,6 +158,7 @@ class Spider:
                 self.encoding,
                 self.get_input_headers(),
                 self.browser_persistence,
+                self.property.get("clear_selenium_session", "1")
             )
             self.input_url = []
             self.input_crawled_url = []
