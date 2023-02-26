@@ -427,7 +427,8 @@ class Spider:
                         self.queue.put(url)
                     self.logger.info("waiting for proxy_blocked input to exhaust")
                     self.queue.join()
-            shutil.rmtree(os.path.join(self.current_path, "selenium"))
+            if self.property.get("clear_selenium_session") != "0":
+                shutil.rmtree(os.path.join(self.current_path, "selenium"))
         except Exception as e:
             pass
             # print(e)
