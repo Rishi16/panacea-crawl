@@ -662,7 +662,6 @@ def wait_driver(driver, tag, wait_time, by="XPATH"):
                 EC.presence_of_element_located((By.CSS_SELECTOR, tag))
             )
 
-        print("Page loaded.")
         return True
     except TimeoutException:
         print("Tag not found:", tag)
