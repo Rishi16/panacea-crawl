@@ -676,8 +676,8 @@ def find_elements_driver(driver, tag):
         return None
 
 
-def set_tag_innerhtml_driver(driver, tag, text):
-    element = find_elements_driver(driver, tag)[0]
+def set_tag_innerhtml_driver(driver, tag, text, loc=0):
+    element = find_elements_driver(driver, tag)[loc]
     driver.execute_script(f'arguments[0].innerHTML = "{text}";', element)
 
 
