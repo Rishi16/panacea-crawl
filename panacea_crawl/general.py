@@ -676,6 +676,11 @@ def find_elements_driver(driver, tag):
         return None
 
 
+def set_tag_innerhtml_driver(driver, tag, text):
+    element = find_elements_driver(driver, tag)[0]
+    driver.execute_script(f'arguments[0].innerHTML = "{text}";', element)
+
+
 # Used in old scripts. Keeping it for backwards compatibiltiy
 def random_proxy(proxies_from_file):
     return get_proxy(proxies_from_file)
