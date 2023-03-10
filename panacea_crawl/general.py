@@ -138,6 +138,7 @@ class Crawl_path:
                            "/chromedriver_win32.zip"
 
             # download the zip file using the url built above
+            print("Setting up chromedriver for chrome")
             latest_driver_zip = wget.download(download_url, 'chromedriver.zip')
 
             # extract the zip file
